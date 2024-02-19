@@ -5,9 +5,13 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"log"
+	"my-app/common"
 	"my-app/module/product/controller"
 	productusecase "my-app/module/product/domain/usecase"
 	productmysql "my-app/module/product/repository/mysql"
+	"my-app/module/user/infras/httpservice"
+	"my-app/module/user/infras/repository"
+	"my-app/module/user/usecase"
 	"net/http"
 	"os"
 )
@@ -39,7 +43,11 @@ func main() {
 		{
 			products.POST("", api.CreateProductAPI(db))
 		}
+
 	}
+
+	userUC := usecase.NewUseCase(repository.NewUserRepo(db), &common.Hasher{})
+	httpservice.NewUserService(userUC).Routes(v1)
 
 	r.Run(":3000") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
