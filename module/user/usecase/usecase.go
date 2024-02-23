@@ -2,83 +2,74 @@ package usecase
 
 import (
 	"context"
-	"errors"
-	"my-app/common"
 	"my-app/module/user/domain"
 )
 
 type UseCase interface {
 	Register(ctx context.Context, dto EmailPasswordRegistrationDTO) error
+	LoginEmailPassword(ctx context.Context, dto EmailPasswordLoginDTO) (*TokenResponseDTO, error)
 }
 
 type Hasher interface {
 	RandomStr(length int) (string, error)
 	HashPassword(salt, password string) (string, error)
+	CompareHashPassword(hashedPassword, salt, password string) bool
+}
+
+type TokenProvider interface {
+	IssueToken(ctx context.Context, id, sub string) (token string, err error)
+	TokenExpireInSeconds() int
+	RefreshExpireInSeconds() int
 }
 
 type useCase struct {
-	repo   UserRepository
-	hasher Hasher
+	*registerUC
+	*loginEmailPasswordUC
 }
 
-func NewUseCase(repo UserRepository, hasher Hasher) UseCase {
-	return &useCase{repo: repo, hasher: hasher}
+type Builder interface {
+	BuildUserQueryRepo() UserQueryRepository
+	BuildUserCmdRepo() UserCommandRepository
+	BuildHasher() Hasher
+	BuildTokenProvider() TokenProvider
+	BuildSessionQueryRepo() SessionQueryRepository
+	BuildSessionCmdRepo() SessionCommandRepository
 }
 
-func (uc *useCase) Register(ctx context.Context, dto EmailPasswordRegistrationDTO) error {
-	// 1. Find user by email:
-	// 1.1 Found: return error (email has existed)
-	// 2. Generate salt
-	// 3. Hash password+salt
-	// 4. Create user entity
-
-	user, err := uc.repo.FindByEmail(ctx, dto.Email)
-
-	if user != nil {
-		return domain.ErrEmailHasExisted
+func UseCaseWithBuilder(b Builder) UseCase {
+	return &useCase{
+		registerUC:           NewRegisterUC(b.BuildUserQueryRepo(), b.BuildUserCmdRepo(), b.BuildHasher()),
+		loginEmailPasswordUC: NewLoginEmailPasswordUC(b.BuildUserQueryRepo(), b.BuildSessionCmdRepo(), b.BuildTokenProvider(), b.BuildHasher()),
 	}
+}
 
-	if err != nil && !errors.Is(err, common.ErrRecordNotFound) {
-		return err
+func NewUseCase(repo UserRepository, hasher Hasher, tokenProvider TokenProvider, sessionRepo SessionRepository) UseCase {
+	return &useCase{
+		registerUC:           NewRegisterUC(repo, repo, hasher),
+		loginEmailPasswordUC: NewLoginEmailPasswordUC(repo, sessionRepo, tokenProvider, hasher),
 	}
-
-	salt, err := uc.hasher.RandomStr(30)
-
-	if err != nil {
-		return err
-	}
-
-	hashedPassword, err := uc.hasher.HashPassword(salt, dto.Password)
-
-	if err != nil {
-		return err
-	}
-
-	userEntity, err := domain.NewUser(
-		common.GenUUID(),
-		dto.FirstName,
-		dto.LastName,
-		dto.Email,
-		hashedPassword,
-		salt,
-		domain.RoleUser,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	if err := uc.repo.Create(ctx, userEntity); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 type UserRepository interface {
-	//Find(ctx context.Context, id uuid.UUID) (*domain.User, error)
+	UserQueryRepository
+	UserCommandRepository
+}
+
+type UserQueryRepository interface {
 	FindByEmail(ctx context.Context, email string) (*domain.User, error)
+}
+
+type UserCommandRepository interface {
 	Create(ctx context.Context, data *domain.User) error
-	//Update(ctx context.Context, data *domain.User) error
-	//Delete(ctx context.Context, data *domain.User) error
+}
+
+type SessionRepository interface {
+	SessionQueryRepository
+	SessionCommandRepository
+}
+
+type SessionQueryRepository interface{}
+
+type SessionCommandRepository interface {
+	Create(ctx context.Context, data *domain.Session) error
 }

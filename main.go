@@ -5,12 +5,12 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"log"
-	"my-app/common"
+	"my-app/builder"
+	"my-app/component"
 	"my-app/module/product/controller"
 	productusecase "my-app/module/product/domain/usecase"
 	productmysql "my-app/module/product/repository/mysql"
 	"my-app/module/user/infras/httpservice"
-	"my-app/module/user/infras/repository"
 	"my-app/module/user/usecase"
 	"net/http"
 	"os"
@@ -19,6 +19,8 @@ import (
 func main() {
 	dsn := os.Getenv("DB_DSN")
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+
+	db = db.Debug()
 
 	if err != nil {
 		log.Fatalln(err)
@@ -46,8 +48,23 @@ func main() {
 
 	}
 
-	userUC := usecase.NewUseCase(repository.NewUserRepo(db), &common.Hasher{})
-	httpservice.NewUserService(userUC).Routes(v1)
+	jwtSecret := os.Getenv("JWT_SECRET")
+
+	tokenProvider := component.NewJWTProvider(jwtSecret,
+		60*60*24*7, 60*60*24*14)
+
+	//userUC := usecase.NewUseCase(repository.NewUserRepo(db), &common.Hasher{}, tokenProvider, repository.NewSessionMySQLRepo(db))
+
+	userUseCase := usecase.UseCaseWithBuilder(builder.NewComplexBuilder(builder.NewSimpleBuilder(db, tokenProvider)))
+
+	httpservice.NewUserService(userUseCase).Routes(v1)
 
 	r.Run(":3000") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
+
+//type mockSessionRepo struct {
+//}
+//
+//func (m mockSessionRepo) Create(ctx context.Context, data *domain.Session) error {
+//	return nil
+//}
