@@ -14,10 +14,11 @@ type UserDTO struct {
 	Password  string    `gorm:"column:password;"`
 	Salt      string    `gorm:"column:salt;"`
 	Role      string    `gorm:"column:role;"`
+	Status    string    `gorm:"column:status;"`
 }
 
 func (dto *UserDTO) ToEntity() (*domain.User, error) {
-	return domain.NewUser(dto.Id, dto.FirstName, dto.LastName, dto.Email, dto.Password, dto.Salt, domain.GetRole(dto.Role))
+	return domain.NewUser(dto.Id, dto.FirstName, dto.LastName, dto.Email, dto.Password, dto.Salt, domain.GetRole(dto.Role), dto.Status)
 }
 
 type SessionDTO struct {
@@ -26,4 +27,9 @@ type SessionDTO struct {
 	RefreshToken string    `gorm:"column:refresh_token;"`
 	AccessExpAt  time.Time `gorm:"column:access_exp_at;"`
 	RefreshExpAt time.Time `gorm:"column:refresh_exp_at;"`
+}
+
+func (dto SessionDTO) ToEntity() (*domain.Session, error) {
+	s := domain.NewSession(dto.Id, dto.UserId, dto.RefreshToken, dto.AccessExpAt, dto.RefreshExpAt)
+	return s, nil
 }
