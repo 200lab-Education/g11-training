@@ -2,16 +2,20 @@ package httpservice
 
 import (
 	"github.com/gin-gonic/gin"
+	sctx "github.com/viettranx/service-context"
+	"github.com/viettranx/service-context/core"
+	"my-app/common"
 	"my-app/module/user/usecase"
 	"net/http"
 )
 
 type service struct {
-	uc usecase.UseCase
+	uc   usecase.UseCase
+	sctx sctx.ServiceContext
 }
 
-func NewUserService(uc usecase.UseCase) service {
-	return service{uc: uc}
+func NewUserService(uc usecase.UseCase, sctx sctx.ServiceContext) service {
+	return service{uc: uc, sctx: sctx}
 }
 
 func (s service) handleRegister() gin.HandlerFunc {
@@ -19,12 +23,12 @@ func (s service) handleRegister() gin.HandlerFunc {
 		var dto usecase.EmailPasswordRegistrationDTO
 
 		if err := c.BindJSON(&dto); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			common.WriteErrorResponse(c, core.ErrBadRequest.WithError(err.Error()))
 			return
 		}
 
 		if err := s.uc.Register(c.Request.Context(), dto); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			common.WriteErrorResponse(c, err)
 			return
 		}
 
@@ -37,14 +41,14 @@ func (s service) handleLogin() gin.HandlerFunc {
 		var dto usecase.EmailPasswordLoginDTO
 
 		if err := c.BindJSON(&dto); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			common.WriteErrorResponse(c, core.ErrBadRequest.WithError(err.Error()))
 			return
 		}
 
 		resp, err := s.uc.LoginEmailPassword(c.Request.Context(), dto)
 
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			common.WriteErrorResponse(c, err)
 			return
 		}
 
@@ -59,18 +63,18 @@ func (s service) handleRefreshToken() gin.HandlerFunc {
 		}
 
 		if err := c.BindJSON(&bodyData); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			common.WriteErrorResponse(c, core.ErrBadRequest.WithError(err.Error()))
 			return
 		}
 
 		data, err := s.uc.RefreshToken(c.Request.Context(), bodyData.RefreshToken)
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			common.WriteErrorResponse(c, err)
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"data": data})
+		c.JSON(http.StatusOK, core.ResponseData(data))
 	}
 }
 

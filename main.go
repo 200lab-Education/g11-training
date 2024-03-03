@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
+	sctx "github.com/viettranx/service-context"
+	"github.com/viettranx/service-context/component/gormc"
 	"log"
 	"my-app/builder"
 	"my-app/common"
@@ -16,36 +16,64 @@ import (
 	"my-app/module/user/infras/repository"
 	"my-app/module/user/usecase"
 	"net/http"
-	"os"
 )
 
+//func f1() {
+//
+//	log.Println("F1")
+//	f2()
+//}
+//
+//func f2() {
+//	log.Println("F2")
+//
+//	defer func() {
+//		if err := recover(); err != nil {
+//			log.Println(err)
+//		}
+//	}()
+//
+//	go func() {
+//		defer func() {
+//			if err := recover(); err != nil {
+//				log.Println(err)
+//			}
+//		}()
+//
+//		panic("panic here")
+//	}()
+//}
+
+func newService() sctx.ServiceContext {
+	return sctx.NewServiceContext(
+		sctx.WithName("G11"),
+		sctx.WithComponent(gormc.NewGormDB(common.KeyGorm, "")),
+		sctx.WithComponent(component.NewJWT(common.KeyJWT)),
+	)
+}
+
 func main() {
-	dsn := os.Getenv("DB_DSN")
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	//f1()
 
-	db = db.Debug()
+	service := newService()
 
-	if err != nil {
+	if err := service.Load(); err != nil {
 		log.Fatalln(err)
 	}
 
+	db := service.MustGet(common.KeyGorm).(common.DbContext).GetDB()
+
 	r := gin.Default()
 
-	//r.Use(middleware.RequireAuth())
-	jwtSecret := os.Getenv("JWT_SECRET")
+	r.Use(middleware.Recovery())
 
-	tokenProvider := component.NewJWTProvider(jwtSecret,
-		60*60*24*7, 60*60*24*14)
+	tokenProvider := service.MustGet(common.KeyJWT).(component.TokenProvider)
 
 	authClient := usecase.NewIntrospectUC(repository.NewUserRepo(db), repository.NewSessionMySQLRepo(db), tokenProvider)
 
-	r.GET("/ping", middleware.RequireAuth(authClient), func(c *gin.Context) {
-
-		requester := c.MustGet(common.KeyRequester).(common.Requester)
-
+	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"message":   "pong",
-			"requester": requester.LastName(),
+			"message": "pong",
 		})
 	})
 
@@ -80,7 +108,7 @@ func main() {
 
 	userUseCase := usecase.UseCaseWithBuilder(builder.NewSimpleBuilder(db, tokenProvider))
 
-	httpservice.NewUserService(userUseCase).Routes(v1)
+	httpservice.NewUserService(userUseCase, service).Routes(v1)
 
 	r.Run(":3000") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"github.com/viettranx/service-context/core"
 	"my-app/common"
 	"my-app/module/user/domain"
 	"time"
@@ -24,12 +25,12 @@ func (uc *loginEmailPasswordUC) LoginEmailPassword(ctx context.Context, dto Emai
 	user, err := uc.userRepo.FindByEmail(ctx, dto.Email)
 
 	if err != nil {
-		return nil, err
+		return nil, core.ErrInternalServerError.WithError(err.Error())
 	}
 
 	// 2. Hash & compare password
 	if ok := uc.hasher.CompareHashPassword(user.Password(), user.Salt(), dto.Password); !ok {
-		return nil, domain.ErrInvalidEmailPassword
+		return nil, core.ErrForbidden.WithError(domain.ErrInvalidEmailPassword.Error())
 	}
 
 	userId := user.Id()
@@ -39,7 +40,7 @@ func (uc *loginEmailPasswordUC) LoginEmailPassword(ctx context.Context, dto Emai
 	accessToken, err := uc.tokenProvider.IssueToken(ctx, sessionId.String(), userId.String())
 
 	if err != nil {
-		return nil, err
+		return nil, core.ErrInternalServerError.WithError(err.Error())
 	}
 
 	// 4. Insert session into DB
@@ -50,7 +51,7 @@ func (uc *loginEmailPasswordUC) LoginEmailPassword(ctx context.Context, dto Emai
 	session := domain.NewSession(sessionId, userId, refreshToken, tokenExpAt, refreshExpAt)
 
 	if err := uc.sessionRepo.Create(ctx, session); err != nil {
-		return nil, err
+		return nil, core.ErrInternalServerError.WithError(err.Error())
 	}
 
 	// 5. Return token response dto
