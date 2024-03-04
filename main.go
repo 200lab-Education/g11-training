@@ -9,9 +9,10 @@ import (
 	"my-app/common"
 	"my-app/component"
 	"my-app/middleware"
+	"my-app/module/image"
 	"my-app/module/product/controller"
-	productusecase "my-app/module/product/domain/usecase"
 	productmysql "my-app/module/product/repository/mysql"
+	"my-app/module/product/usecase"
 	"my-app/module/user/infras/httpservice"
 	"my-app/module/user/infras/repository"
 	"my-app/module/user/usecase"
@@ -49,6 +50,7 @@ func newService() sctx.ServiceContext {
 		sctx.WithName("G11"),
 		sctx.WithComponent(gormc.NewGormDB(common.KeyGorm, "")),
 		sctx.WithComponent(component.NewJWT(common.KeyJWT)),
+		sctx.WithComponent(component.NewAWSS3Provider(common.KeyAWSS3)),
 	)
 }
 
@@ -109,6 +111,7 @@ func main() {
 	userUseCase := usecase.UseCaseWithBuilder(builder.NewSimpleBuilder(db, tokenProvider))
 
 	httpservice.NewUserService(userUseCase, service).Routes(v1)
+	image.NewHTTPService(service).Routes(v1)
 
 	r.Run(":3000") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }

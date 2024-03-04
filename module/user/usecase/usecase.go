@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"github.com/google/uuid"
+	"my-app/common"
 	"my-app/module/user/domain"
 )
 
@@ -82,4 +83,9 @@ type SessionQueryRepository interface {
 type SessionCommandRepository interface {
 	Create(ctx context.Context, data *domain.Session) error
 	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+type ImageRepository interface {
+	Find(ctx context.Context, id uuid.UUID) (*common.Image, error)
+	SetImageStatusActivated(ctx context.Context, id uuid.UUID) error
 }
