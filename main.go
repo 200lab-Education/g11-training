@@ -11,6 +11,7 @@ import (
 	"my-app/middleware"
 	"my-app/module/image"
 	"my-app/module/product/controller"
+	productHTTP "my-app/module/product/infras/httpservice"
 	productmysql "my-app/module/product/repository/mysql"
 	"my-app/module/product/usecase"
 	"my-app/module/user/infras/httpservice"
@@ -110,8 +111,9 @@ func main() {
 
 	userUseCase := usecase.UseCaseWithBuilder(builder.NewSimpleBuilder(db, tokenProvider))
 
-	httpservice.NewUserService(userUseCase, service).Routes(v1)
+	httpservice.NewUserService(userUseCase, service).SetAuthClient(authClient).Routes(v1)
 	image.NewHTTPService(service).Routes(v1)
+	productHTTP.NewHttpService(service).Routes(v1)
 
 	r.Run(":3000") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }

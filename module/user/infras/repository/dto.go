@@ -41,3 +41,7 @@ func StringFromPointer(ptr *string) string {
 	}
 	return *ptr
 }
+
+func GetStrPt(s string) *string {
+	return &s
+}

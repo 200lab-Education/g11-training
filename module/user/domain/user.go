@@ -55,8 +55,12 @@ func (u User) Role() Role {
 
 func (u User) Status() string { return u.status }
 
-func (u *User) ChangeAvatar(avt string) {
+func (u User) Avatar() string { return u.avatar }
+
+func (u *User) ChangeAvatar(avt string) error {
 	u.avatar = avt
+
+	return nil
 }
 
 type Role int

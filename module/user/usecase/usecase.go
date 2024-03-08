@@ -68,6 +68,7 @@ type UserQueryRepository interface {
 
 type UserCommandRepository interface {
 	Create(ctx context.Context, data *domain.User) error
+	Update(ctx context.Context, data *domain.User) error
 }
 
 type SessionRepository interface {
