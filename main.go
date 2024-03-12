@@ -9,6 +9,8 @@ import (
 	"my-app/common"
 	"my-app/component"
 	"my-app/middleware"
+	"my-app/module/category/infras/grpcservice"
+	catHTTP "my-app/module/category/infras/httpservice"
 	"my-app/module/image"
 	"my-app/module/product/controller"
 	productHTTP "my-app/module/product/infras/httpservice"
@@ -20,38 +22,13 @@ import (
 	"net/http"
 )
 
-//func f1() {
-//
-//	log.Println("F1")
-//	f2()
-//}
-//
-//func f2() {
-//	log.Println("F2")
-//
-//	defer func() {
-//		if err := recover(); err != nil {
-//			log.Println(err)
-//		}
-//	}()
-//
-//	go func() {
-//		defer func() {
-//			if err := recover(); err != nil {
-//				log.Println(err)
-//			}
-//		}()
-//
-//		panic("panic here")
-//	}()
-//}
-
 func newService() sctx.ServiceContext {
 	return sctx.NewServiceContext(
 		sctx.WithName("G11"),
 		sctx.WithComponent(gormc.NewGormDB(common.KeyGorm, "")),
 		sctx.WithComponent(component.NewJWT(common.KeyJWT)),
 		sctx.WithComponent(component.NewAWSS3Provider(common.KeyAWSS3)),
+		sctx.WithComponent(component.NewConfigComponent(common.KeyConfig)),
 	)
 }
 
@@ -114,26 +91,11 @@ func main() {
 	httpservice.NewUserService(userUseCase, service).SetAuthClient(authClient).Routes(v1)
 	image.NewHTTPService(service).Routes(v1)
 	productHTTP.NewHttpService(service).Routes(v1)
+	catHTTP.NewCategoryHttpService(service).Routes(v1)
+
+	go func() {
+		_ = grpcservice.NewCatGRPCService(8080, service).Start()
+	}()
 
 	r.Run(":3000") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
-
-//type fakeAuthClient struct{}
-//
-//func (fakeAuthClient) IntrospectToken(ctx context.Context, accessToken string) (common.Requester, error) {
-//	return common.NewRequester(
-//		uuid.MustParse("018dc1aa-a2ce-7013-9e96-4143227217d0"),
-//		uuid.MustParse("018de54f-898b-7724-b6e4-cf262d8c337b"),
-//		"Viet",
-//		"Tran",
-//		"user",
-//		"activated",
-//	), nil
-//}
-
-//type mockSessionRepo struct {
-//}
-//
-//func (m mockSessionRepo) Create(ctx context.Context, data *domain.Session) error {
-//	return nil
-//}

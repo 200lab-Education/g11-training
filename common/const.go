@@ -7,6 +7,7 @@ const (
 	KeyGorm      = "gorm"
 	KeyJWT       = "jwt"
 	KeyAWSS3     = "aws_s3"
+	KeyConfig    = "config"
 )
 
 type DbContext interface {
