@@ -3,8 +3,9 @@ package usecase
 import (
 	"context"
 	"github.com/viettranx/service-context/core"
+	"log"
 	"my-app/common"
-	"my-app/common/asyncjob"
+	"my-app/common/pubsub"
 	"my-app/module/user/domain"
 )
 
@@ -42,14 +43,23 @@ func (uc *changeAvtUC) ChangeAvatar(ctx context.Context, dto SingleImageDTO) err
 	go func() {
 		defer common.Recover()
 
-		job := asyncjob.NewJob(
-			func(ctx context.Context) error {
-				return uc.imgRepo.SetImageStatusActivated(ctx, dto.ImageId)
-			},
-			asyncjob.WithName("SetImageStatusActivated"),
-		)
+		ps := ctx.Value("pubsub").(pubsub.PubSub)
 
-		asyncjob.NewGroup(false, job).Run(ctx)
+		if err := ps.Publish(ctx, common.TopicUserChangedAvt, pubsub.NewMessage(map[string]interface{}{
+			"user_id": dto.Requester.UserId().String(),
+			"img_id":  dto.ImageId.String(),
+		})); err != nil {
+			log.Println(err)
+		}
+
+		//job := asyncjob.NewJob(
+		//	func(ctx context.Context) error {
+		//		return uc.imgRepo.SetImageStatusActivated(ctx, dto.ImageId)
+		//	},
+		//	asyncjob.WithName("SetImageStatusActivated"),
+		//)
+		//
+		//asyncjob.NewGroup(false, job).Run(ctx)
 	}()
 
 	return nil

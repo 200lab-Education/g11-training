@@ -2,6 +2,7 @@ package pubsub
 
 import (
 	"context"
+	sctx "github.com/viettranx/service-context"
 	"log"
 	"my-app/common"
 	"sync"
@@ -25,6 +26,14 @@ func NewLocalPubSub(name string) *localPubSub {
 	pb.run()
 
 	return pb
+}
+
+func (ps *localPubSub) ID() string {
+	return ps.name
+}
+
+func (ps *localPubSub) Activate(serviceContext sctx.ServiceContext) error {
+	return nil
 }
 
 func (ps *localPubSub) Publish(ctx context.Context, topic string, data *Message) error {
@@ -103,14 +112,6 @@ func (ps *localPubSub) run() error {
 	return nil
 }
 
-func (ps *localPubSub) GetPrefix() string {
-	return ps.name
-}
-
-func (ps *localPubSub) Get() interface{} {
-	return ps
-}
-
 func (ps *localPubSub) Name() string {
 	return ps.name
 }
@@ -118,16 +119,6 @@ func (ps *localPubSub) Name() string {
 func (ps *localPubSub) InitFlags() {
 }
 
-func (ps *localPubSub) Configure() error {
+func (ps *localPubSub) Stop() error {
 	return nil
-}
-
-func (ps *localPubSub) Run() error {
-	return nil
-}
-
-func (ps *localPubSub) Stop() <-chan bool {
-	c := make(chan bool)
-	go func() { c <- true }()
-	return c
 }

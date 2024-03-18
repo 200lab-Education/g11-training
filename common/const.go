@@ -7,7 +7,11 @@ const (
 	KeyGorm      = "gorm"
 	KeyJWT       = "jwt"
 	KeyAWSS3     = "aws_s3"
+	KeyNATS      = "nats"
+	KeyLocalPS   = "local_ps"
 	KeyConfig    = "config"
+
+	TopicUserChangedAvt = "user.avatar.changed"
 )
 
 type DbContext interface {

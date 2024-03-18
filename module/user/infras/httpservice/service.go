@@ -1,6 +1,7 @@
 package httpservice
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	sctx "github.com/viettranx/service-context"
 	"github.com/viettranx/service-context/core"
@@ -98,7 +99,9 @@ func (s service) handleChangeAvatar() gin.HandlerFunc {
 		userRepo := repository.NewUserRepo(dbCtx.GetDB())
 		imgRepo := image.NewRepo(dbCtx.GetDB())
 
-		if err := usecase.NewChangeAvtUC(userRepo, userRepo, imgRepo).ChangeAvatar(c.Request.Context(), dto); err != nil {
+		ctxWithPubSub := context.WithValue(c.Request.Context(), "pubsub", s.sctx.MustGet(common.KeyLocalPS))
+
+		if err := usecase.NewChangeAvtUC(userRepo, userRepo, imgRepo).ChangeAvatar(ctxWithPubSub, dto); err != nil {
 			common.WriteErrorResponse(c, err)
 			return
 		}
