@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/viettranx/service-context/core"
 	"my-app/common"
+	"my-app/common/asyncjob"
 	"my-app/module/user/domain"
 )
 
@@ -40,7 +41,15 @@ func (uc *changeAvtUC) ChangeAvatar(ctx context.Context, dto SingleImageDTO) err
 
 	go func() {
 		defer common.Recover()
-		_ = uc.imgRepo.SetImageStatusActivated(ctx, dto.ImageId)
+
+		job := asyncjob.NewJob(
+			func(ctx context.Context) error {
+				return uc.imgRepo.SetImageStatusActivated(ctx, dto.ImageId)
+			},
+			asyncjob.WithName("SetImageStatusActivated"),
+		)
+
+		asyncjob.NewGroup(false, job).Run(ctx)
 	}()
 
 	return nil

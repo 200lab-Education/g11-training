@@ -8,8 +8,7 @@ import (
 	"github.com/viettranx/service-context/core"
 	"google.golang.org/grpc"
 	"log"
-	"my-app/common"
-	query2 "my-app/module/category/query"
+	catQuery "my-app/module/category/query"
 	"my-app/proto/category"
 	"net"
 )
@@ -33,9 +32,7 @@ func NewCategoryServer(sctx sctx.ServiceContext) *categoryServer {
 }
 
 func (cs *categoryServer) GetCategoriesByIds(ctx context.Context, request *category.GetCatIdsRequest) (*category.CatIdsResp, error) {
-	var cats []query2.CategoryDTO
-
-	dbContext := cs.sctx.MustGet(common.KeyGorm).(common.DbContext)
+	var cats []catQuery.CategoryDTO
 
 	ids := make([]uuid.UUID, len(request.Ids))
 
@@ -43,9 +40,9 @@ func (cs *categoryServer) GetCategoriesByIds(ctx context.Context, request *categ
 		ids[i] = uuid.MustParse(request.Ids[i])
 	}
 
-	if err := dbContext.GetDB().Table(query2.CategoryDTO{}.TableName()).
-		Where("id in (?)", ids).
-		Find(&cats).Error; err != nil {
+	cats, err := catQuery.NewCategoriesByIdsQuery(cs.sctx).Execute(ctx, ids)
+
+	if err != nil {
 		return nil, core.ErrBadRequest.WithError("cannot list categories").WithDebug(err.Error())
 	}
 
